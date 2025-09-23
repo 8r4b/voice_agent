@@ -286,3 +286,109 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Transcript Styles */
+.transcript-container {
+  margin-top: 20px;
+  padding: 20px;
+  border: 1px solid #444;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1e1e1e, #2a2a2a);
+  max-height: 400px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.transcript-container h3 {
+  margin: 0 0 15px 0;
+  color: #ff5722;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.live-transcript {
+  padding: 12px;
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-style: italic;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+.messages-history {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.message {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+}
+
+.message:hover {
+  transform: translateX(2px);
+}
+
+.message.assistant {
+  background: linear-gradient(135deg, #2e7d32, #4caf50);
+  border-left: 4px solid #66bb6a;
+}
+
+.message.user {
+  background: linear-gradient(135deg, #f57c00, #ff9800);
+  border-left: 4px solid #ffb74d;
+}
+
+.message-header {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.message-text {
+  color: white;
+  line-height: 1.4;
+}
+
+.no-conversation {
+  color: #888;
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 2px dashed #444;
+}
+
+/* Scrollbar styling for transcript */
+.transcript-container::-webkit-scrollbar,
+.messages-history::-webkit-scrollbar {
+  width: 6px;
+}
+
+.transcript-container::-webkit-scrollbar-track,
+.messages-history::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 3px;
+}
+
+.transcript-container::-webkit-scrollbar-thumb,
+.messages-history::-webkit-scrollbar-thumb {
+  background: #ff5722;
+  border-radius: 3px;
+}
+
+.transcript-container::-webkit-scrollbar-thumb:hover,
+.messages-history::-webkit-scrollbar-thumb:hover {
+  background: #e64a19;
+}
