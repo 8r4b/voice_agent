@@ -16,6 +16,9 @@ function App() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
 
+  // Get backend URL from environment variable
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+
   useEffect(() => {
     vapi
       .on("call-start", () => {
@@ -54,18 +57,30 @@ function App() {
 
   const getCallDetails = (interval = 3000) => {
     setLoadingResult(true);
-    fetch("/call-details?call_id=" + callId)
-      .then((response) => response.json())
+    console.log(`Making request to: ${BACKEND_URL}/call-details?call_id=${callId}`);
+    
+    fetch(`${BACKEND_URL}/call-details?call_id=${callId}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then((data) => {
+        console.log("Backend response:", data);
         if (data.analysis && data.summary) {
-          console.log(data);
           setCallResult(data);
           setLoadingResult(false);
         } else {
+          console.log("Call details not ready, retrying...");
           setTimeout(() => getCallDetails(interval), interval);
         }
       })
-      .catch((error) => alert(error));
+      .catch((error) => {
+        console.error("Error fetching call details:", error);
+        alert(`Error fetching call details: ${error.message}`);
+        setLoadingResult(false);
+      });
   };
 
   const showForm = !loading && !started && !loadingResult && !callResult;
@@ -73,6 +88,11 @@ function App() {
 
   return (
     <div className="app-container">
+      {/* Debug info - remove after testing */}
+      <div style={{ fontSize: '12px', color: '#666', marginBottom: '10px' }}>
+        Backend URL: {BACKEND_URL}
+      </div>
+      
       {showForm && (
         <>
           <h1>Contact Details (Required)</h1>

@@ -8,8 +8,12 @@ import traceback
 load_dotenv()
 
 app = Flask(__name__)
-# Allow all origins for now - we'll restrict after deployment
-CORS(app)
+# Configure CORS to allow both localhost and Vercel domains
+CORS(app, origins=[
+    "http://localhost:5173",          # Local development
+    "http://127.0.0.1:5173",         # Alternative localhost
+    "voice-agent-umber.vercel.app"        # Allow other Render services if needed
+])
 
 def fetch_call_details(call_id):
     url = f"https://api.vapi.ai/call/{call_id}"
