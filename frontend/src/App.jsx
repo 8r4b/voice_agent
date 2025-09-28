@@ -11,10 +11,6 @@ function App() {
   const [callResult, setCallResult] = useState(null);
   const [loadingResult, setLoadingResult] = useState(false);
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [email, setEmail] = useState("");
   const [transcript, setTranscript] = useState(""); // Add transcript state
   const [messages, setMessages] = useState([]); // Add messages array for conversation
 
@@ -120,13 +116,9 @@ function App() {
     }, 2000);
   };
 
-  const handleInputChange = (setter) => (event) => {
-    setter(event.target.value);
-  };
-
   const handleStart = async () => {
     setLoading(true);
-    const data = await startAssistant(firstName, lastName, email, phoneNumber);
+    const data = await startAssistant();
     setCallId(data.id);
   };
 
@@ -163,52 +155,27 @@ function App() {
       });
   };
 
-  const showForm = !loading && !started && !loadingResult && !callResult;
-  const allFieldsFilled = firstName && lastName && email && phoneNumber;
-
   return (
     <div className="app-container">
-      {showForm && (
-        <>
-          <h1>Contact Details (Required)</h1>
-          <input
-            type="text"
-            placeholder="First Name"
-            value={firstName}
-            className="input-field"
-            onChange={handleInputChange(setFirstName)}
-          />
-          <input
-            type="text"
-            placeholder="Last Name"
-            value={lastName}
-            className="input-field"
-            onChange={handleInputChange(setLastName)}
-          />
-          <input
-            type="email"
-            placeholder="Email address"
-            value={email}
-            className="input-field"
-            onChange={handleInputChange(setEmail)}
-          />
-          <input
-            type="tel"
-            placeholder="Phone number"
-            value={phoneNumber}
-            className="input-field"
-            onChange={handleInputChange(setPhoneNumber)}
-          />
-          {!started && (
-            <button
-              onClick={handleStart}
-              disabled={!allFieldsFilled}
-              className="button"
-            >
-              Start Application Call
-            </button>
-          )}
-        </>
+      {!loading && !started && !loadingResult && !callResult && (
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          <h1>Voice Assistant</h1>
+          <button
+            onClick={handleStart}
+            className="button"
+            style={{ 
+              padding: '15px 30px', 
+              fontSize: '18px', 
+              backgroundColor: '#4CAF50', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '8px', 
+              cursor: 'pointer' 
+            }}
+          >
+            Start Voice Call
+          </button>
+        </div>
       )}
       {loadingResult && <p>Loading call details... please wait</p>}
       {!loadingResult && callResult && (
