@@ -19,7 +19,10 @@ def fetch_call_details(call_id):
     
     print(f"Fetching call details for ID: {call_id}")
     print(f"API URL: {url}")
-    print(f"API Key: {os.getenv('VAPI_API_KEY')[:10]}..." if os.getenv('VAPI_API_KEY') else "No API Key found")
+    api_key_full = os.getenv('VAPI_API_KEY')
+    print(f"API Key loaded: {api_key_full is not None}")
+    print(f"API Key length: {len(api_key_full) if api_key_full else 0}")
+    print(f"API Key starts with: {api_key_full[:10]}..." if api_key_full else "No API Key found")
     
     try:
         response = requests.get(url, headers=headers)
