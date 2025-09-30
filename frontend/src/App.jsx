@@ -11,7 +11,8 @@ function App() {
   const [callResult, setCallResult] = useState(null);
   const [loadingResult, setLoadingResult] = useState(false);
 
-
+  // Get backend URL from environment variable
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
   useEffect(() => {
     vapi
@@ -47,7 +48,7 @@ function App() {
 
   const getCallDetails = (interval = 3000) => {
     setLoadingResult(true);
-    fetch("/call-details?call_id=" + callId)
+    fetch(`${BACKEND_URL}/call-details?call_id=${callId}`)
       .then((response) => response.json())
       .then((data) => {
         if (data.analysis && data.summary) {
