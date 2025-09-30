@@ -6,6 +6,7 @@ function App() {
   const [started, setStarted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assistantIsSpeaking, setAssistantIsSpeaking] = useState(false);
+  const [userIsSpeaking, setUserIsSpeaking] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState(0);
   const [callId, setCallId] = useState("");
   const [callResult, setCallResult] = useState(null);
@@ -23,17 +24,34 @@ function App() {
       .on("call-end", () => {
         setStarted(false);
         setLoading(false);
+        setAssistantIsSpeaking(false);
+        setUserIsSpeaking(false);
       })
       .on("speech-start", () => {
         setAssistantIsSpeaking(true);
+        setUserIsSpeaking(false);
       })
       .on("speech-end", () => {
         setAssistantIsSpeaking(false);
       })
       .on("volume-level", (level) => {
         setVolumeLevel(level);
+        // Detect user speaking based on volume level
+        if (level > 0.1 && !assistantIsSpeaking) {
+          setUserIsSpeaking(true);
+        } else if (level < 0.05) {
+          setUserIsSpeaking(false);
+        }
+      })
+      // Listen for user speech events
+      .on("user-speech-start", () => {
+        setUserIsSpeaking(true);
+        setAssistantIsSpeaking(false);
+      })
+      .on("user-speech-end", () => {
+        setUserIsSpeaking(false);
       });
-  }, []);
+  }, [assistantIsSpeaking]);
 
   const handleStart = async () => {
     setLoading(true);
@@ -145,6 +163,7 @@ function App() {
       {started && (
         <ActiveCallDetails
           assistantIsSpeaking={assistantIsSpeaking}
+          userIsSpeaking={userIsSpeaking}
           volumeLevel={volumeLevel}
           endCallCallback={handleStop}
         />
