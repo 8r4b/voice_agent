@@ -2,14 +2,14 @@ const CallStatusIndicator = ({ assistantIsSpeaking, userIsSpeaking }) => {
   const getStatus = () => {
     if (userIsSpeaking) {
       return {
-        text: "🎤 You are speaking...",
+        text: "🤖 AI is responding...",
         color: "#4CAF50",
         backgroundColor: "#1a5c1a",
         spinnerColor: "#4CAF50"
       };
     } else if (assistantIsSpeaking) {
       return {
-        text: "🤖 AI is responding...",
+        text: "🎤 You are speaking...",
         color: "#2196F3",
         backgroundColor: "#1a3a5c",
         spinnerColor: "#2196F3"
