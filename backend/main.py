@@ -24,6 +24,15 @@ def fetch_call_details(call_id):
     print(f"API Key length: {len(api_key_full) if api_key_full else 0}")
     print(f"API Key starts with: {api_key_full[:10]}..." if api_key_full else "No API Key found")
     
+    # Test if API key works by calling a different endpoint first
+    test_url = "https://api.vapi.ai/assistant"
+    print(f"Testing API key with: {test_url}")
+    test_response = requests.get(test_url, headers=headers)
+    print(f"Test API Response Status: {test_response.status_code}")
+    if test_response.status_code != 200:
+        print(f"API Key test failed: {test_response.text}")
+        return {"error": f"API Key authentication failed: {test_response.text}"}
+    
     try:
         response = requests.get(url, headers=headers)
         print(f"VAPI API Response Status: {response.status_code}")

@@ -124,12 +124,18 @@ function App() {
 
   const handleStop = () => {
     stopAssistant();
-    getCallDetails();
+    setLoadingResult(true); // Show spinner immediately when user clicks End Call
+    // Wait 30 seconds before trying to fetch call details to allow VAPI to process
+    console.log("Call stopped. Waiting 30 seconds for VAPI to process the call...");
+    setTimeout(() => {
+      getCallDetails();
+    }, 30000); // 30 seconds delay
   };
 
-  const getCallDetails = (interval = 3000) => {
-    setLoadingResult(true);
-    console.log(`Making request to: ${BACKEND_URL}/call-details?call_id=${callId}`);
+  const getCallDetails = (interval = 10000, maxRetries = 12, currentRetry = 0) => {
+    // Loading state is already set in handleStop, no need to set it again
+    
+    console.log(`Making request to: ${BACKEND_URL}/call-details?call_id=${callId} (Attempt ${currentRetry + 1}/${maxRetries})`);
     
     fetch(`${BACKEND_URL}/call-details?call_id=${callId}`)
       .then((response) => {
@@ -140,18 +146,32 @@ function App() {
       })
       .then((data) => {
         console.log("Backend response:", data);
+        
+        // Check if we have the analysis data
         if (data.analysis && data.summary) {
+          console.log("✅ Call analysis retrieved successfully!");
+          console.log("Analysis structure:", JSON.stringify(data.analysis, null, 2));
           setCallResult(data);
           setLoadingResult(false);
+        } else if (currentRetry < maxRetries - 1) {
+          console.log(`⏳ Call analysis not ready yet. Retrying in ${interval/1000} seconds... (${currentRetry + 1}/${maxRetries})`);
+          setTimeout(() => getCallDetails(interval, maxRetries, currentRetry + 1), interval);
         } else {
-          console.log("Call details not ready, retrying...");
-          setTimeout(() => getCallDetails(interval), interval);
+          console.log("❌ Max retries reached. Analysis may not be available for this call.");
+          setLoadingResult(false);
+          alert("Call analysis is taking longer than expected. The call may have been too short to generate analysis, or there may be an issue with the VAPI service.");
         }
       })
       .catch((error) => {
         console.error("Error fetching call details:", error);
-        alert(`Error fetching call details: ${error.message}`);
-        setLoadingResult(false);
+        
+        if (currentRetry < maxRetries - 1) {
+          console.log(`🔄 Retrying due to error... (${currentRetry + 1}/${maxRetries})`);
+          setTimeout(() => getCallDetails(interval, maxRetries, currentRetry + 1), interval);
+        } else {
+          alert(`Error fetching call details: ${error.message}`);
+          setLoadingResult(false);
+        }
       });
   };
 
@@ -177,11 +197,78 @@ function App() {
           </button>
         </div>
       )}
-      {loadingResult && <p>Loading call details... please wait</p>}
+      {loadingResult && (
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          padding: '40px',
+          gap: '20px'
+        }}>
+          <div className="spinner"></div>
+          <p style={{ fontSize: '16px', color: '#666' }}>
+            Analyzing your call... This may take up to 30 sec
+          </p>
+        </div>
+      )}
       {!loadingResult && callResult && (
-        <div className="call-result">
-          <p>Qualified: {callResult.analysis.structuredData.is_qualified.toString()}</p>
-          <p>{callResult.summary}</p>
+        <div className="call-result" style={{ 
+          padding: '30px', 
+          maxWidth: '800px', 
+          margin: '0 auto',
+          backgroundColor: '#1e1e1e',
+          borderRadius: '12px',
+          border: '1px solid #333'
+        }}>
+          <h2 style={{ color: '#ff5722', marginBottom: '20px' }}>📊 Call Analysis Results</h2>
+          
+          {/* Summary Section */}
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ color: '#fff', marginBottom: '10px' }}>📝 Summary</h3>
+            <p style={{ 
+              backgroundColor: '#2a2a2a', 
+              padding: '15px', 
+              borderRadius: '8px',
+              lineHeight: '1.6',
+              border: '1px solid #444'
+            }}>
+              {callResult.summary}
+            </p>
+          </div>
+
+          {/* Structured Data Section */}
+          {callResult.analysis?.structuredData && (
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{ color: '#fff', marginBottom: '10px' }}>🗂️ Extracted Data</h3>
+              <p style={{ color: '#ccc', marginBottom: '15px', fontSize: '14px' }}>
+                This is the data extracted based on the conversation.
+              </p>
+              <pre style={{ 
+                backgroundColor: '#2a2a2a', 
+                padding: '20px', 
+                borderRadius: '8px',
+                border: '1px solid #444',
+                overflow: 'auto',
+                fontSize: '14px',
+                color: '#e0e0e0',
+                fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+              }}>
+                {JSON.stringify(callResult.analysis.structuredData, null, 2)}
+              </pre>
+            </div>
+          )}
+
+          {/* Qualified Status */}
+          <div style={{ 
+            padding: '15px', 
+            backgroundColor: callResult.analysis?.structuredData?.is_qualified ? '#1b5e20' : '#d32f2f',
+            borderRadius: '8px',
+            textAlign: 'center'
+          }}>
+            <strong>
+              Status: {callResult.analysis?.structuredData?.is_qualified ? '✅ Qualified' : '❌ Not Qualified'}
+            </strong>
+          </div>
         </div>
       )}
       {(loading || loadingResult) && <div className="loading"></div>}
