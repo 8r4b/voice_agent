@@ -15,48 +15,138 @@ function App() {
   // Get backend URL from environment variable
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
 
+  // Add global error handler for unhandled promise rejections and errors
   useEffect(() => {
-    vapi
-      .on("call-start", () => {
-        setLoading(false);
-        setStarted(true);
-      })
-      .on("call-end", () => {
+    const handleUnhandledRejection = (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+      // Prevent the default behavior (which would log to console)
+      event.preventDefault();
+    };
+
+    const handleError = (event) => {
+      console.error('Unhandled error:', event.error);
+      // Prevent the default behavior if it's a VAPI-related error
+      if (event.error && event.error.message && event.error.message.includes('Meeting has ended')) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+
+  useEffect(() => {
+    let hasHandledCallEnd = false;
+
+    const handleCallStart = () => {
+      console.log('Call started');
+      setLoading(false);
+      setStarted(true);
+      hasHandledCallEnd = false; // Reset flag when call starts
+    };
+
+    const handleCallEnd = (callEndedEvent) => {
+      if (hasHandledCallEnd) return; // Prevent duplicate handling
+      hasHandledCallEnd = true;
+      
+      console.log('Call ended:', callEndedEvent);
+      setStarted(false);
+      setLoading(false);
+      setAssistantIsSpeaking(false);
+      setUserIsSpeaking(false);
+    };
+
+    const handleSpeechStart = () => {
+      setAssistantIsSpeaking(true);
+      setUserIsSpeaking(false);
+    };
+
+    const handleSpeechEnd = () => {
+      setAssistantIsSpeaking(false);
+    };
+
+    const handleVolumeLevel = (level) => {
+      setVolumeLevel(level);
+      // Detect user speaking based on volume level
+      if (level > 0.1 && !assistantIsSpeaking) {
+        setUserIsSpeaking(true);
+      } else if (level < 0.05) {
+        setUserIsSpeaking(false);
+      }
+    };
+
+    const handleUserSpeechStart = () => {
+      setUserIsSpeaking(true);
+      setAssistantIsSpeaking(false);
+    };
+
+    const handleUserSpeechEnd = () => {
+      setUserIsSpeaking(false);
+    };
+
+    const handleError = (error) => {
+      if (hasHandledCallEnd) return; // If we already handled call end, ignore subsequent errors
+      
+      console.error('VAPI Error in component:', error);
+      
+      // Check if this is a "meeting ended" error
+      if (error.errorMsg && error.errorMsg.includes('Meeting has ended')) {
+        console.log('Meeting ended due to ejection - this is normal behavior');
+        hasHandledCallEnd = true;
+        // Reset state silently for meeting end
         setStarted(false);
         setLoading(false);
         setAssistantIsSpeaking(false);
         setUserIsSpeaking(false);
-      })
-      .on("speech-start", () => {
-        setAssistantIsSpeaking(true);
-        setUserIsSpeaking(false);
-      })
-      .on("speech-end", () => {
+      } else {
+        // Reset state on other errors
+        setLoading(false);
+        setStarted(false);
         setAssistantIsSpeaking(false);
-      })
-      .on("volume-level", (level) => {
-        setVolumeLevel(level);
-        // Detect user speaking based on volume level
-        if (level > 0.1 && !assistantIsSpeaking) {
-          setUserIsSpeaking(true);
-        } else if (level < 0.05) {
-          setUserIsSpeaking(false);
-        }
-      })
-      // Listen for user speech events
-      .on("user-speech-start", () => {
-        setUserIsSpeaking(true);
-        setAssistantIsSpeaking(false);
-      })
-      .on("user-speech-end", () => {
         setUserIsSpeaking(false);
-      });
+        // Show user-friendly error message for non-meeting-end errors
+        alert('Voice call encountered an error: ' + (error.errorMsg || error.message || 'Unknown error'));
+      }
+    };
+
+    // Attach event listeners
+    vapi.on("call-start", handleCallStart);
+    vapi.on("call-end", handleCallEnd);
+    vapi.on("speech-start", handleSpeechStart);
+    vapi.on("speech-end", handleSpeechEnd);
+    vapi.on("volume-level", handleVolumeLevel);
+    vapi.on("user-speech-start", handleUserSpeechStart);
+    vapi.on("user-speech-end", handleUserSpeechEnd);
+    vapi.on("error", handleError);
+
+    // Cleanup function to remove event listeners
+    return () => {
+      vapi.off("call-start", handleCallStart);
+      vapi.off("call-end", handleCallEnd);
+      vapi.off("speech-start", handleSpeechStart);
+      vapi.off("speech-end", handleSpeechEnd);
+      vapi.off("volume-level", handleVolumeLevel);
+      vapi.off("user-speech-start", handleUserSpeechStart);
+      vapi.off("user-speech-end", handleUserSpeechEnd);
+      vapi.off("error", handleError);
+    };
   }, [assistantIsSpeaking]);
 
   const handleStart = async () => {
     setLoading(true);
-    const data = await startAssistant();
-    setCallId(data.id);
+    try {
+      const data = await startAssistant();
+      setCallId(data.id);
+    } catch (error) {
+      console.error('Failed to start assistant:', error);
+      setLoading(false);
+      alert('Failed to start voice call. Please check your microphone permissions and try again.');
+    }
   };
 
   const handleStop = () => {
@@ -67,17 +157,27 @@ function App() {
   const getCallDetails = (interval = 3000) => {
     setLoadingResult(true);
     fetch(`${BACKEND_URL}/call-details?call_id=${callId}`)
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then((data) => {
         if (data.analysis && data.summary) {
-          console.log(data);
+          console.log('Call details received:', data);
           setCallResult(data);
           setLoadingResult(false);
         } else {
+          console.log('Waiting for call analysis to complete...');
           setTimeout(() => getCallDetails(interval), interval);
         }
       })
-      .catch((error) => alert(error));
+      .catch((error) => {
+        console.error('Error fetching call details:', error);
+        setLoadingResult(false);
+        alert('Failed to fetch call details: ' + error.message);
+      });
   };
 
   return (
